@@ -26,3 +26,30 @@ BabyDataSet[:10]    # print first 10 entries
 df = pd.DataFrame(data = BabyDataSet, columns = ['Names', 'Births']
 df[:10]     # list first 10 entries
 # Export this to a CSV file
+df.to_csv('births.txt', index = False,, header = False)
+# pull csv into dataframe
+Location = r'C:\users\venc\births.txt'
+df = pd.read_csv(Location)
+df.info()
+df.head()
+# avoid header problem
+df = pd.read_csv(Location, header = None)
+df.info
+df.tail()  # to get last records
+# give our own header
+df = pd.read_csv(Location, names =['Names', 'Births']
+# delete the text file - optional
+os.remove(Location)
+df['Names'].unique()    # get unique names
+# print unique records
+for x in df['Names'].unique():
+    print (x)
+name = df.groupby('Names')           # Group by name
+df = name.sum()                      # apply sum function
+df                                   # print groupwise totals
+# Analyze the data
+Sorted = df.sort_values(['Births'], ascending = False)
+Sorted.head(1)
+# Present data
+
+                  
