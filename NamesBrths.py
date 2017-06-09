@@ -51,5 +51,4 @@ df                                   # print groupwise totals
 Sorted = df.sort_values(['Births'], ascending = False)
 Sorted.head(1)
 # Present data
-
-                  
+df.['Births'].plot.bar()
