@@ -1,0 +1,436 @@
+{
+  "name": "LinkedIn Page Post Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "intervalSize": 1,
+        "intervalUnit": "hours"
+      },
+      "id": "1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "resource": "post",
+        "operation": "create",
+        "organizationUrn": "={{$node[\"Get Organization ID\"].json[\"id\"]}}",
+        "text": "={{$node[\"Prepare Post Content\"].json[\"post_text\"]}}",
+        "additionalFields": {
+          "visibility": "PUBLIC",
+          "content": {
+            "media": [
+              {
+                "status": "READY",
+                "media": "={{$node[\"Upload Media\"].json[\"mediaId\"]}}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "2b3c4d5e-6f7g-8h9i-0j1k-l2m3n4o5p6q7",
+      "name": "Post to LinkedIn Page",
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 2,
+      "position": [1020, 300],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "linkedin-credentials",
+          "name": "LinkedIn OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "post_text",
+              "value": "🚀 Exciting news from our team!\n\nWe're thrilled to share our latest innovation in automation technology. This breakthrough will revolutionize how businesses handle their daily workflows.\n\n✨ Key highlights:\n• Increased efficiency by 300%\n• Reduced manual errors\n• Seamless integration capabilities\n• User-friendly interface\n\nWhat automation challenges are you facing in your business? Let's discuss in the comments! 👇\n\n#Automation #Innovation #Technology #Business #LinkedIn #n8n"
+            },
+            {
+              "name": "image_url",
+              "value": "https://via.placeholder.com/1200x630/0077B5/FFFFFF?text=LinkedIn+Post+Image"
+            },
+            {
+              "name": "organization_name",
+              "value": "Your Company Name"
+            }
+          ]
+        }
+      },
+      "id": "3c4d5e6f-7g8h-9i0j-1k2l-m3n4o5p6q7r8",
+      "name": "Prepare Post Content",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.linkedin.com/v2/organizations",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "linkedInOAuth2Api",
+        "options": {
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "q",
+                "value": "administeredOrganization"
+              }
+            ]
+          }
+        }
+      },
+      "id": "4d5e6f7g-8h9i-0j1k-2l3m-n4o5p6q7r8s9",
+      "name": "Get Organization ID",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [640, 300],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "linkedin-credentials",
+          "name": "LinkedIn OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{$node[\"Prepare Post Content\"].json[\"image_url\"]}}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "5e6f7g8h-9i0j-1k2l-3m4n-o5p6q7r8s9t0",
+      "name": "Download Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [640, 480]
+    },
+    {
+      "parameters": {
+        "url": "https://api.linkedin.com/v2/assets?action=registerUpload",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "registerUploadRequest",
+              "value": "{\n  \"recipes\": [\"urn:li:digitalmediaRecipe:feedshare-image\"],\n  \"owner\": \"urn:li:organization:{{$node[\"Get Organization ID\"].json[\"elements\"][0][\"id\"]}}\",\n  \"serviceRelationships\": [\n    {\n      \"relationshipType\": \"OWNER\",\n      \"identifier\": \"urn:li:userGeneratedContent\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "linkedInOAuth2Api",
+        "options": {
+          "bodyContentType": "json"
+        }
+      },
+      "id": "6f7g8h9i-0j1k-2l3m-4n5o-p6q7r8s9t0u1",
+      "name": "Register Upload",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [840, 480],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "linkedin-credentials",
+          "name": "LinkedIn OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{$node[\"Register Upload\"].json[\"value\"][\"uploadMechanism\"][\"com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest\"][\"uploadUrl\"]}}",
+        "sendBody": true,
+        "bodyContentType": "raw",
+        "body": "={{$node[\"Download Image\"].binary[\"data\"]}}",
+        "options": {
+          "headers": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/octet-stream"
+              }
+            ]
+          }
+        }
+      },
+      "id": "7g8h9i0j-1k2l-3m4n-5o6p-q7r8s9t0u1v2",
+      "name": "Upload Media",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [840, 660]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition1",
+              "leftValue": "={{$node[\"Post to LinkedIn Page\"].json[\"id\"]}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "8h9i0j1k-2l3m-4n5o-6p7q-r8s9t0u1v2w3",
+      "name": "Check Post Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1220, 300]
+    },
+    {
+      "parameters": {
+        "content": "✅ **LinkedIn Post Published Successfully!**\n\n📊 **Post Details:**\n- Post ID: {{$node[\"Post to LinkedIn Page\"].json[\"id\"]}}\n- Organization: {{$node[\"Prepare Post Content\"].json[\"organization_name\"]}}\n- Time: {{new Date().toISOString()}}\n\n📝 **Content Preview:**\n{{$node[\"Prepare Post Content\"].json[\"post_text\"].substring(0, 100)}}...\n\n🔗 **Post URL:** https://www.linkedin.com/feed/update/{{$node[\"Post to LinkedIn Page\"].json[\"id\"]}}\n\n#LinkedInPost #AutomatedPosting #n8n",
+        "options": {}
+      },
+      "id": "9i0j1k2l-3m4n-5o6p-7q8r-s9t0u1v2w3x4",
+      "name": "Success Notification",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [1420, 200],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-credentials",
+          "name": "Slack API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "❌ **LinkedIn Post Failed!**\n\n🚨 **Error Details:**\n- Time: {{new Date().toISOString()}}\n- Organization: {{$node[\"Prepare Post Content\"].json[\"organization_name\"]}}\n- Error: {{$node[\"Post to LinkedIn Page\"].json[\"error\"] || \"Unknown error occurred\"}}\n\n📝 **Attempted Content:**\n{{$node[\"Prepare Post Content\"].json[\"post_text\"].substring(0, 100)}}...\n\n🔧 **Action Required:** Please check the workflow configuration and try again.\n\n#LinkedInPost #Error #n8n",
+        "options": {}
+      },
+      "id": "0j1k2l3m-4n5o-6p7q-8r9s-t0u1v2w3x4y5",
+      "name": "Error Notification",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [1420, 400],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-credentials",
+          "name": "Slack API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "spreadsheet",
+        "operation": "appendRow",
+        "documentId": "your-google-sheet-id-here",
+        "sheetName": "LinkedIn Posts Log",
+        "values": {
+          "values": [
+            "={{new Date().toISOString()}}",
+            "={{$node[\"Prepare Post Content\"].json[\"organization_name\"]}}",
+            "={{$node[\"Post to LinkedIn Page\"].json[\"id\"] || \"FAILED\"}}",
+            "={{$node[\"Prepare Post Content\"].json[\"post_text\"].substring(0, 50)}}...",
+            "={{$node[\"Post to LinkedIn Page\"].json[\"id\"] ? \"SUCCESS\" : \"FAILED\"}}",
+            "={{$node[\"Post to LinkedIn Page\"].json[\"error\"] || \"N/A\"}}"
+          ]
+        }
+      },
+      "id": "1k2l3m4n-5o6p-7q8r-9s0t-u1v2w3x4y5z6",
+      "name": "Log to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1620, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-credentials",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assignment1",
+              "name": "mediaId",
+              "value": "={{$node[\"Register Upload\"].json[\"value\"][\"asset\"]}}",
+              "type": "string"
+            },
+            {
+              "name": "uploadUrl",
+              "value": "={{$node[\"Register Upload\"].json[\"value\"][\"uploadMechanism\"][\"com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest\"][\"uploadUrl\"]}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2l3m4n5o-6p7q-8r9s-0t1u-v2w3x4y5z6a7",
+      "name": "Extract Media Info",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [840, 300]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Post Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Post Content": {
+      "main": [
+        [
+          {
+            "node": "Get Organization ID",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Download Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Organization ID": {
+      "main": [
+        [
+          {
+            "node": "Register Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image": {
+      "main": [
+        [
+          {
+            "node": "Register Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Register Upload": {
+      "main": [
+        [
+          {
+            "node": "Extract Media Info",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Upload Media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Media": {
+      "main": [
+        [
+          {
+            "node": "Post to LinkedIn Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Media Info": {
+      "main": [
+        [
+          {
+            "node": "Post to LinkedIn Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to LinkedIn Page": {
+      "main": [
+        [
+          {
+            "node": "Check Post Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Post Success": {
+      "main": [
+        [
+          {
+            "node": "Success Notification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Notification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-27T10:00:00.000Z",
+      "updatedAt": "2025-01-27T10:00:00.000Z",
+      "id": "linkedin-automation",
+      "name": "LinkedIn Automation"
+    },
+    {
+      "createdAt": "2025-01-27T10:00:00.000Z",
+      "updatedAt": "2025-01-27T10:00:00.000Z",
+      "id": "social-media",
+      "name": "Social Media"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-27T10:00:00.000Z",
+  "versionId": "1"
+}
