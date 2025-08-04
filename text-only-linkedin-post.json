@@ -1,0 +1,264 @@
+{
+  "name": "LinkedIn Text-Only Post Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "hour": 9,
+              "minute": 0
+            }
+          ]
+        }
+      },
+      "id": "1a2b3c4d-text-only-trigger",
+      "name": "Daily Morning Post",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "post_text",
+              "value": "🌅 Good morning, LinkedIn community!\n\nStarting the week with some motivation: Success isn't just about what you accomplish in your life, it's about what you inspire others to do.\n\n💡 Today's focus:\n• Setting clear goals\n• Taking actionable steps\n• Supporting team members\n• Celebrating small wins\n\nWhat's your main focus for this week? Share in the comments! 👇\n\n#MondayMotivation #Leadership #TeamWork #Goals #Success #LinkedInCommunity"
+            },
+            {
+              "name": "organization_name",
+              "value": "Your Company Name"
+            }
+          ]
+        }
+      },
+      "id": "2b3c4d5e-text-content",
+      "name": "Prepare Text Content",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.linkedin.com/v2/organizations",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "linkedInOAuth2Api",
+        "options": {
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "q",
+                "value": "administeredOrganization"
+              }
+            ]
+          }
+        }
+      },
+      "id": "3c4d5e6f-get-org",
+      "name": "Get Organization ID",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [640, 300],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "linkedin-credentials",
+          "name": "LinkedIn OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.linkedin.com/v2/ugcPosts",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "author",
+              "value": "urn:li:organization:{{$node[\"Get Organization ID\"].json[\"elements\"][0][\"id\"]}}"
+            },
+            {
+              "name": "lifecycleState",
+              "value": "PUBLISHED"
+            },
+            {
+              "name": "specificContent",
+              "value": "{\n  \"com.linkedin.ugc.ShareContent\": {\n    \"shareCommentary\": {\n      \"text\": \"{{$node[\"Prepare Text Content\"].json[\"post_text\"]}}\"\n    },\n    \"shareMediaCategory\": \"NONE\"\n  }\n}"
+            },
+            {
+              "name": "visibility",
+              "value": "{\n  \"com.linkedin.ugc.MemberNetworkVisibility\": \"PUBLIC\"\n}"
+            }
+          ]
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "linkedInOAuth2Api",
+        "options": {
+          "bodyContentType": "json",
+          "headers": {
+            "parameters": [
+              {
+                "name": "X-Restli-Protocol-Version",
+                "value": "2.0.0"
+              }
+            ]
+          }
+        }
+      },
+      "id": "4d5e6f7g-post-text",
+      "name": "Post Text to LinkedIn",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [840, 300],
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "linkedin-credentials",
+          "name": "LinkedIn OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition1",
+              "leftValue": "={{$node[\"Post Text to LinkedIn\"].json[\"id\"]}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "5e6f7g8h-check-success",
+      "name": "Check Post Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1040, 300]
+    },
+    {
+      "parameters": {
+        "content": "✅ **LinkedIn Text Post Published Successfully!**\n\n📊 **Post Details:**\n- Post ID: {{$node[\"Post Text to LinkedIn\"].json[\"id\"]}}\n- Organization: {{$node[\"Prepare Text Content\"].json[\"organization_name\"]}}\n- Time: {{new Date().toISOString()}}\n\n📝 **Content Preview:**\n{{$node[\"Prepare Text Content\"].json[\"post_text\"].substring(0, 100)}}...\n\n#LinkedInPost #TextPost #Success #n8n",
+        "options": {}
+      },
+      "id": "6f7g8h9i-success-msg",
+      "name": "Success Notification",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [1240, 200],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-credentials",
+          "name": "Slack API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "❌ **LinkedIn Text Post Failed!**\n\n🚨 **Error Details:**\n- Time: {{new Date().toISOString()}}\n- Organization: {{$node[\"Prepare Text Content\"].json[\"organization_name\"]}}\n- Error: {{$node[\"Post Text to LinkedIn\"].json[\"error\"] || \"Unknown error occurred\"}}\n\n📝 **Attempted Content:**\n{{$node[\"Prepare Text Content\"].json[\"post_text\"].substring(0, 100)}}...\n\n🔧 **Action Required:** Please check the workflow configuration.\n\n#LinkedInPost #TextPost #Error #n8n",
+        "options": {}
+      },
+      "id": "7g8h9i0j-error-msg",
+      "name": "Error Notification",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [1240, 400],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-credentials",
+          "name": "Slack API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily Morning Post": {
+      "main": [
+        [
+          {
+            "node": "Prepare Text Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Text Content": {
+      "main": [
+        [
+          {
+            "node": "Get Organization ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Organization ID": {
+      "main": [
+        [
+          {
+            "node": "Post Text to LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Text to LinkedIn": {
+      "main": [
+        [
+          {
+            "node": "Check Post Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Post Success": {
+      "main": [
+        [
+          {
+            "node": "Success Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-27T10:00:00.000Z",
+      "updatedAt": "2025-01-27T10:00:00.000Z",
+      "id": "linkedin-text-posts",
+      "name": "LinkedIn Text Posts"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-27T10:00:00.000Z",
+  "versionId": "1"
+}
